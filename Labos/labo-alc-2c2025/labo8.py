@@ -4,11 +4,11 @@ import librerias as lib
 import labo6 as l6
 import labo3 as l3
 
-def sigma(D, k, tol=1e-15):
-    sigma = np.zeros((k, k))
+def sigma(D, k, tol=1e-15): #La consigna pide una matriz columna
+    sigma = np.zeros((k, 1))
     for i in range(k):
         if D[i,i] > tol:
-            sigma[i,i] = math.sqrt(D[i,i]) 
+            sigma[i,0] = math.sqrt(D[i,i]) 
 
     return sigma
 
@@ -17,6 +17,14 @@ def ui(sigma, A, vi):  # (1/sigma_i) * A * v_i
     Avi = lib.calcularAx(A, vi)
     return (Avi / sigma)
 
+def autovectores_y_autovalores_positivos(AAt, tol=1e-15):
+    AVECS , AVALS= l6.diagRH(AAt, tol)
+    return  AVALS, AVECS , AAt.shape[0] # A * At simetrica
+    #TODO:
+    #1) sacar los AVALS 0 y AVECS de Avals 0 (sale no calulandolos, ie, paramos cuando sean 0)
+    #2) Una vez hacemos lo primero, habria que calcular bien r
+    #Agregar sugerencia de parar de agregar autovalores cuando sean <= tol 
+
 def svd_reducida(A,k="max",tol=1e-15):
     """
     A la matriz de interes (de m x n)
@@ -24,22 +32,27 @@ def svd_reducida(A,k="max",tol=1e-15):
     tol la tolerancia para considerar un valor singular igual a cero
     Retorna hatU (matriz de m x k), hatSig (vector de k valores singulares) y hatV (matriz de n x k)
     """
+    #TODO: una vez separado en casos, habria que hacer el tip c del pdf
     m, n = A.shape
     AAt = lib.producto_mat(A, lib.traspuesta(A))
-    AVALS, AVECS = l6.diagRH(AAt, tol) # A * At simetrica 
+    AVALS, AVECS, r = autovectores_y_autovalores_positivos(AAt,tol)
 
     if k == "max":
         k = min(m, n) # chequear
+    if k > r:
+        print("la matriz no tiene tantos valores singulares")
+        return None
 
     SIGMA = sigma(AVALS, k, tol)
 
     Vk = np.zeros((k, n))             # Ya esta traspuesta!
     for i in range(k):
-        Vk[i] = AVECS[:,i] / l3.norma(AVECS[:,i], 2)  # O dividir por norma? esta raro normaliza
+        v_i = AVECS[:,i]
+        Vk[i] = v_i / l3.norma(v_i, 2)  # O dividir por norma? esta raro normaliza
     
-    Uk = np.zeros((m, k))
+    Uk = lib.producto_mat(A, lib.traspuesta(Vk)) #Uk@SIGMA_k = AV_k
     for i in range(k):
-        Uk[:,i] = ui(SIGMA[i,i], A, Vk[i])  # u_i = (1/sigma_i) * A * v_i
+        Uk[:,i] = SIGMA[i,0] * Uk[:,i] # u_i = (1/sigma_i) * A * v_i <=> sigma_i*u_i = A*v_i
 
     return Uk, SIGMA, Vk
 
